@@ -5,8 +5,7 @@
 #include <ftps.h>
 #include <QFile>
 #include <QProcess>
-
-
+#include <windows.h>
 
 
 class UpdaterHelper : public QObject
@@ -31,6 +30,7 @@ public:
         }
         try
         {
+            bool isSomethingUpdated = false;
             auto lambda = [this, local, remote, toExecute]()
             {
                 static int counter = 0;
@@ -59,7 +59,7 @@ public:
 
 
             };
-            connect (ftps.data(), FTPS::loadFinished, lambda);
+            connect (ftps.data(), &FTPS::loadFinished, lambda);
             QDir dir;
             const QString dumpPath = "Предыдущая версия";
             dir.mkdir("Предыдущая версия");
@@ -80,21 +80,28 @@ public:
                     tmpLocal = dumpPath + "/" + local[i];
                 }
                 QFile file(local[i]);
-                QDateTime dt = ftps->getFileTime(remote[i]);
+                QString remoteFile = remote[i];
+                remoteFile.replace("\\", "/");
+                QDateTime dt = ftps->getFileTime(remoteFile);
                 QFileInfo info(file);
                 if (dt.isValid() && info.lastModified() < dt)
                 {
                     file.copy(tmpLocal);
                     file.setPermissions(QFile::ReadOther | QFile::WriteOther);
                     file.remove();
-                    ftps->getFile(remote[i], local[i]);
+                    ftps->getFile(remoteFile, local[i]);
+                    isSomethingUpdated = true;
                 }
                 else
                 {
-                   emit errorMessage(QString("Файл %1 не нуждается в обновлении").arg(local[i]));
+                    emit errorMessage(QString("Файл %1 не нуждается в обновлении").arg(local[i]));
                 }
             }
             emit errorMessage("Все файлы проверены на предмет наличия обновлений.");
+            if (!isSomethingUpdated)
+            {
+                emit timeToQuit();
+            }
         }
         catch(std::exception& e)
         {
@@ -103,8 +110,45 @@ public:
     }
 signals:
     void timeToQuit();
+
     void errorMessage(const QString& str);
 private:
+    QString getVersionString(const QString& fName)
+    {
+        // first of all, GetFileVersionInfoSize
+        DWORD dwHandle;
+        QString f = "C:/Users/Yumatov/Documents/GitHub/build-iki57upd_gui_launcher-Desktop_Qt_5_9_4_MinGW_32bit4-Debug/BOKZDatabase.exe";
+        DWORD dwLen = GetFileVersionInfoSize(f.toStdWString().c_str(), &dwHandle);
+        // GetFileVersionInfo
+        LPSTR lpData = new char[dwLen];
+        if(!GetFileVersionInfo(fName.toStdWString().c_str(), dwHandle, dwLen, lpData))
+        {
+            qDebug() << "error in GetFileVersionInfo";
+            qDebug() << GetLastError();
+            delete[] lpData;
+            return QString();
+        }
+
+        // VerQueryValue
+        VS_FIXEDFILEINFO *lpBuffer = nullptr;
+        UINT uLen;
+
+        if(!VerQueryValue(lpData,
+                          QString("\\").toStdWString().c_str(),
+                          (LPVOID*)&lpBuffer,
+                          &uLen))
+        {
+            qDebug() << "error in VerQueryValue";
+            delete[] lpData;
+            return QString();
+        }
+        return  QString::number( (lpBuffer->dwFileVersionMS >> 16 ) & 0xffff ) + "." +
+                QString::number( ( lpBuffer->dwFileVersionMS) & 0xffff ) + "." +
+                QString::number( ( lpBuffer->dwFileVersionLS >> 16 ) & 0xffff ) + "." +
+                QString::number( ( lpBuffer->dwFileVersionLS) & 0xffff );
+
+    }
+
     QScopedPointer <FTPS> ftps;
 
 };

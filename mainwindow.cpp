@@ -18,7 +18,7 @@ void MainWindow::startUpdate()
 {
     UpdaterHelper helper;
     QObject::connect(&helper, &UpdaterHelper::errorMessage, [this](auto& str) {ui->infoLabel->setText(str);});
-    QObject::connect(&helper, &UpdaterHelper::timeToQuit, [this](){QTimer::singleShot(5000, qApp->quit);});
+    QObject::connect(&helper, &UpdaterHelper::timeToQuit, [](){QTimer::singleShot(5000, qApp->quit);});
 
     QFile file("config.ini");
     if (!file.exists())
