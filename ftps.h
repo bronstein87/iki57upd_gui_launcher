@@ -67,7 +67,7 @@ public:
 signals:
     void uploadFinished(QString message);
 
-    void loadFinished();
+    void loadFinished(const QString& path);
 
 private:
     size_t (*read_callback)(void*, size_t, size_t, void*);

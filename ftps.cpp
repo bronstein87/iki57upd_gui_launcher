@@ -220,7 +220,7 @@ void FTPS::getFile(const QString& path, const QString& saveTo)
     }
 
     curl_global_cleanup();
-    emit loadFinished();
+    emit loadFinished(path);
 }
 
 
@@ -236,7 +236,7 @@ void FTPS::getFile(const QString& path, const QByteArray& writeTo)
     }
 
     curl_global_cleanup();
-    emit loadFinished();
+    emit loadFinished(path);
 }
 
 
@@ -282,7 +282,7 @@ QDateTime FTPS::getFileTime(const QString& path)
         curl_easy_cleanup(curl);
         throw std::runtime_error(QString("Error libcurl init").toStdString());
     }
-    emit loadFinished();
+    emit loadFinished(path);
 
 }
 

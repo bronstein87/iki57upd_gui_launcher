@@ -14,7 +14,7 @@ class UpdaterHelper : public QObject
 public:
     UpdaterHelper() : ftps(new FTPS)
     {
-        ftps->setConnectionSettings("", "", "");
+        ftps->setConnectionSettings("ftpuser", "/j=@WJ205", "ftp://193.232.17.58:21");
     }
     ~UpdaterHelper() {}
     void handleWrongArgs()
@@ -31,30 +31,37 @@ public:
         try
         {
             bool isSomethingUpdated = false;
-            auto lambda = [this, local, remote, toExecute]()
+            auto lambda = [this, local, remote, toExecute](auto str)
             {
-                static int counter = 0;
+                static int counter = 1;
 
-                if (toExecute.contains(counter))
+                for (int i = 0; i < remote.size(); i++)
                 {
-                    QProcess* p = new QProcess();
-                    connect(p, &QProcess::errorOccurred, this, [this, p]()
+                    QString tmp = remote[i];
+                    if (tmp.contains("\\"))
                     {
-                        emit this->errorMessage(p->errorString());
-                    });
-                    QString path = local.last();
-                    p->start(path.append("\"").prepend("\""));
+                        tmp.replace("\\", "/");
+                    }
+                    if (tmp == str)
+                    {
+                        if (toExecute.contains(i))
+                        {
+                            this->startProcess(local[i]);
+                            break;
+                        }
+                    }
                 }
 
-                if (counter < local.size() - 1)
+
+                if (counter < local.size())
                 {
                     ++counter;
                 }
                 else
                 {
                     counter = 0;
-                    emit errorMessage("Успешно завершено!");
-                    emit timeToQuit();
+                    emit this->errorMessage("Успешно завершено!");
+                    emit this->timeToQuit();
                 }
 
 
@@ -94,6 +101,10 @@ public:
                 }
                 else
                 {
+                    if (toExecute.contains(i))
+                    {
+                        startProcess(local[i]);
+                    }
                     emit errorMessage(QString("Файл %1 не нуждается в обновлении").arg(local[i]));
                 }
             }
@@ -113,6 +124,18 @@ signals:
 
     void errorMessage(const QString& str);
 private:
+
+    void startProcess (const QString& file)
+    {
+        QProcess* p = new QProcess();
+        connect(p, &QProcess::errorOccurred, this, [this, p]()
+        {
+            emit this->errorMessage(p->errorString());
+        });
+        QString path = file;
+        p->start(path.append("\"").prepend("\""));
+    }
+
     QString getVersionString(const QString& fName)
     {
         // first of all, GetFileVersionInfoSize

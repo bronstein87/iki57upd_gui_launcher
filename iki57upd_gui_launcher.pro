@@ -43,3 +43,5 @@ win32: LIBS += -L$$PWD/libcurl/ -llibcurl_imp
 
 INCLUDEPATH += $$PWD/libcurl
 DEPENDPATH += $$PWD/libcurl
+
+win32:RC_FILE = icon.rc
