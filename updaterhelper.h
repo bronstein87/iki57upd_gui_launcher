@@ -47,8 +47,8 @@ public:
                         if (toExecute.contains(i))
                         {
                             this->startProcess(local[i]);
-                            break;
                         }
+                        break;
                     }
                 }
 
