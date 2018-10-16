@@ -211,10 +211,14 @@ void FTPS::getFile(const QString& path, const QString& saveTo)
 
     curl = curl_easy_init();
     if(curl) {
+        int pos = saveTo.indexOf(QRegExp("(/)(?!.+/)"), 0);
+        QString pathPart = saveTo.mid(0, pos);
+        QDir dir;
+        dir.mkpath(pathPart);
         QFile file(saveTo);
         if (!file.open(QIODevice::WriteOnly))
         {
-            throw std::runtime_error(saveTo.toStdString() + "Wrong filename.");
+            throw std::runtime_error(saveTo.toStdString() + " Wrong filename.");
         }
         handleGet(path, res, &file, curl);
     }
