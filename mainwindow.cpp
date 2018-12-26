@@ -20,6 +20,24 @@ void MainWindow::startUpdate()
     QObject::connect(&helper, &UpdaterHelper::errorMessage, [this](auto& str) {ui->infoLabel->setText(str);});
     QObject::connect(&helper, &UpdaterHelper::timeToQuit, [](){QTimer::singleShot(5000, qApp->quit);});
 
+    QFile configPath("internal.ini");
+    bool upperFlag = false;
+    if (!configPath.exists())
+    {
+        ui->infoLabel->setText("Не найден файл кофигурации internal.ini");
+        helper.handleWrongArgs();
+    }
+    else
+    {
+        QSettings settings("internal.ini", QSettings::IniFormat);
+        settings.beginGroup("Remote_Files");
+        QString remote = settings.value(settings.allKeys().first()).toString();
+        settings.endGroup();
+        settings.beginGroup("Local_Files");
+        QString local = settings.value(settings.allKeys().first()).toString();
+        helper.updateConfig(remote, local);
+        settings.endGroup();
+    }
     QFile file("config.ini");
     if (!file.exists())
     {
@@ -35,6 +53,10 @@ void MainWindow::startUpdate()
             QSettings settings("config.ini", QSettings::IniFormat);
             settings.setIniCodec( "UTF-8" );
             QStringList list;
+            settings.beginGroup("Path_Up");
+            upperFlag = settings.value(settings.allKeys().first()).toBool();
+            settings.endGroup();
+
             settings.beginGroup("Local_Files");
             list = settings.allKeys();
             for (int i = 0; i < list.size(); i++)
@@ -45,7 +67,12 @@ void MainWindow::startUpdate()
                     toExecute.append(i);
                     local.last() = local.last().remove(">>exe");
                 }
-
+                if (upperFlag)
+                {
+                    QDir d (QDir::currentPath());
+                    d.cdUp();
+                    local.last() = d.path() + "/" + local.last();
+                }
             }
             settings.endGroup();
             settings.beginGroup("Remote_Files");
@@ -57,7 +84,6 @@ void MainWindow::startUpdate()
             settings.endGroup();
 
             ui->progressBar->setValue(50);
-
             if (local.size() != remote.size())
             {
                 ui->infoLabel->setText("Неверно составлен файл конфигурации.");

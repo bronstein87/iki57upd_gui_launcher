@@ -212,9 +212,12 @@ void FTPS::getFile(const QString& path, const QString& saveTo)
     curl = curl_easy_init();
     if(curl) {
         int pos = saveTo.indexOf(QRegExp("(/)(?!.+/)"), 0);
-        QString pathPart = saveTo.mid(0, pos);
-        QDir dir;
-        dir.mkpath(pathPart);
+        if (pos != -1)
+        {
+            QString pathPart = saveTo.mid(0, pos);
+            QDir dir;
+            dir.mkpath(pathPart);
+        }
         QFile file(saveTo);
         if (!file.open(QIODevice::WriteOnly))
         {

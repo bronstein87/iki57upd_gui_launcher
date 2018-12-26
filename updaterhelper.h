@@ -21,6 +21,19 @@ public:
     {
         emit timeToQuit();
     }
+    void updateConfig(const QString& remotePath, const QString& pathTo)
+    {
+        try
+        {
+            QString tmpRemotePath = remotePath;
+            tmpRemotePath.replace("\\", "/");
+            ftps->getFile(tmpRemotePath, pathTo);
+        }
+        catch(std::exception& e)
+        {
+            emit errorMessage(QString(e.what()));
+        }
+    }
     void updateExe(const QStringList& local, const QStringList& remote, const QVector <qint32>& toExecute)
     {
         if (local.size() != remote.size())
@@ -89,24 +102,37 @@ public:
                 QFile file(local[i]);
                 QString remoteFile = remote[i];
                 remoteFile.replace("\\", "/");
-                QDateTime dt = ftps->getFileTime(remoteFile);
-                QFileInfo info(file);
-                if (dt.isValid() && info.lastModified() < dt)
+                if (!file.exists())
                 {
-                    file.copy(tmpLocal);
-                    file.setPermissions(QFile::ReadOther | QFile::WriteOther);
-                    file.remove();
                     ftps->getFile(remoteFile, local[i]);
                     isSomethingUpdated = true;
-                }
-                else
-                {
                     if (toExecute.contains(i))
                     {
                         startProcess(local[i]);
                     }
-                    emit errorMessage(QString("Файл %1 не нуждается в обновлении").arg(local[i]));
                 }
+                else
+                {
+                    QDateTime dt = ftps->getFileTime(remoteFile);
+                    QFileInfo info(file);
+                    if (dt.isValid() && info.lastModified() < dt)
+                    {
+                        file.copy(tmpLocal);
+                        file.setPermissions(QFile::ReadOther | QFile::WriteOther);
+                        file.remove();
+                        ftps->getFile(remoteFile, local[i]);
+                        isSomethingUpdated = true;
+                    }
+                    else
+                    {
+                        if (toExecute.contains(i))
+                        {
+                            startProcess(local[i]);
+                        }
+                        emit errorMessage(QString("Файл %1 не нуждается в обновлении").arg(local[i]));
+                    }
+                }
+
             }
             emit errorMessage("Все файлы проверены на предмет наличия обновлений.");
             if (!isSomethingUpdated)
